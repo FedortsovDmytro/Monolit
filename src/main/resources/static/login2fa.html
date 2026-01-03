@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>ExpenseTracker — Вхід</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .box {
+            background: white;
+            padding: 30px;
+            width: 350px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,.1);
+        }
+
+        h3 {
+            text-align: center;
+        }
+
+        input, button {
+            width: 100%;
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 14px;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        img {
+            display: block;
+            margin: 15px auto;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error {
+            color: red;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="box">
+
+    <!-- LOGIN -->
+    <div id="loginBox">
+        <h3>Вхід</h3>
+        <input id="email" type="email" placeholder="Email">
+        <input id="password" type="password" placeholder="Пароль">
+        <button onclick="login()">Увійти</button>
+    </div>
+
+    <!-- 2FA -->
+    <div id="twofaBox" class="hidden">
+        <h3>Двофакторна автентифікація</h3>
+        <p>Скануйте QR-код в Google Authenticator</p>
+
+        <img id="qr" width="200">
+
+        <input id="code" placeholder="6-значний код">
+        <button onclick="verify2fa()">Підтвердити</button>
+    </div>
+
+    <div id="error" class="error"></div>
+
+</div>
+
+<script>
+    let userId = null;
+
+    function showError(msg) {
+        document.getElementById("error").innerText = msg;
+    }
+
+    async function login() {
+        showError("");
+
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        const res = await fetch("/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+        });
+
+        if (!res.ok) {
+            showError("Невірний email або пароль");
+            return;
+        }
+
+        const data = await res.json();
+
+        // 🔐 2FA REQUIRED
+        if (data.twoFactorRequired) {
+            userId = data.userId;
+
+            document.getElementById("loginBox").classList.add("hidden");
+            document.getElementById("twofaBox").classList.remove("hidden");
+
+            // QR з otpauth://
+            document.getElementById("qr").src =
+                "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" +
+                encodeURIComponent(data.qrCodeUrl);
+
+            return;
+        }
+
+        // ✅ SUCCESS WITHOUT 2FA
+        saveTokens(data);
+        alert("Успішний вхід!");
+    }
+
+    async function verify2fa() {
+        showError("");
+
+        const code = document.getElementById("code").value;
+
+        const res = await fetch("/auth/login/2fa", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, code })
+        });
+
+        if (!res.ok) {
+            showError("Невірний код");
+            return;
+        }
+
+        const data = await res.json();
+        saveTokens(data);
+        alert("2FA підтверджено!");
+    }
+
+    function saveTokens(data) {
+        localStorage.setItem("accessToken", data.accessToken);
+        localStorage.setItem("refreshToken", data.refreshToken);
+    }
+</script>
+
+</body>
+</html>
