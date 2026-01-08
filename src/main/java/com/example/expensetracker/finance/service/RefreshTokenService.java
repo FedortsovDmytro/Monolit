@@ -5,6 +5,7 @@ import com.example.expensetracker.finance.entity.RefreshToken;
 import com.example.expensetracker.finance.entity.User;
 import com.example.expensetracker.finance.repository.RefreshTokenRepository;
 //import org.springframework.security.core.userdetails.User;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -12,6 +13,7 @@ import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 @Service
+@Transactional
 public class RefreshTokenService {
 
     private static final Duration TTL = Duration.ofHours(5);
@@ -23,7 +25,7 @@ public class RefreshTokenService {
 
     public RefreshToken create(User user) {
         repo.deleteByUser(user);
-
+        repo.flush();
         String token = UUID.randomUUID().toString();
 
         return repo.save(
