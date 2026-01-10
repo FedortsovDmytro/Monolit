@@ -1,7 +1,7 @@
-package com.example.expensetracker.comunication.ConsumerProducer;
+package com.example.expensetracker.comunication.jms.listener;
 
 import com.example.expensetracker.comunication.event.TransactionCreatedEvent;
-import org.springframework.jms.annotation.JmsListener;
+import com.example.expensetracker.comunication.jms.producer.TransactionRabbitProducer;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -9,9 +9,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Component
 public class TransactionEventListener {
 
-    private final TransactionJmsProducer producer;
+    private final TransactionRabbitProducer producer;
 
-    public TransactionEventListener(TransactionJmsProducer producer) {
+    public TransactionEventListener(TransactionRabbitProducer producer) {
         this.producer = producer;
     }
 
@@ -19,7 +19,6 @@ public class TransactionEventListener {
             phase = TransactionPhase.AFTER_COMMIT
     )
     public void handle(TransactionCreatedEvent event) {
-
-        producer.sendTransactionCreated(event);
+        producer.send(event);
     }
 }
